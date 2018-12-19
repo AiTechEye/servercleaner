@@ -1,6 +1,8 @@
 servercleaner={
 	players=365,
 	actions={},
+	nodes={},
+	node_actions={},
 	}
 
 --revoke_moderator=90,
@@ -13,9 +15,47 @@ minetest.register_privilege("dont_delete", {
 	give_to_singleplayer= false,
 })
 
+servercleaner.register_owner_node=function(node,action)
+	if type(node)=="table" then
+		for i, n in pairs(node) do
+			if minetest.get_modpath(n:sub(0,n:find(":")-1)) then
+				table.insert(servercleaner.nodes,n)
+				servercleaner.node_actions[n]=action or servercleaner.reset_owner
+			end
+		end
+	else
+		if minetest.get_modpath(node:sub(0,node:find(":")-1)) then
+			table.insert(servercleaner.nodes,node)
+			servercleaner.node_actions[node]=action or servercleaner.reset_owner
+		end
+	end
+end
+
 servercleaner.register_on_delete=function(mod_depends,action)
 	if minetest.get_modpath(mod_depends) then
 		servercleaner.actions[mod_depends]=action
+	end
+end
+
+servercleaner.reset_owner=function(pos,node)
+	local meta=minetest.get_meta(pos)
+	local owner=meta:get_string("owner")
+	if owner~="" and not minetest.player_exists(owner) then
+		meta:set_string("owner","")
+		local def=minetest.registered_nodes[node.name]
+		if def and def.description then
+			meta:set_string("infotext", def.description .. " (Abandoned)")
+		else
+			meta:set_string("infotext", "Abandoned")
+		end
+	end
+end
+
+servercleaner.remove_owned_node=function(pos,node)
+	local meta=minetest.get_meta(pos)
+	local owner=meta:get_string("owner")
+	if owner~="" and not minetest.player_exists(owner) then
+		minetest.remove_node(pos)
 	end
 end
 
@@ -79,22 +119,13 @@ minetest.after(0,function()
 	end
 end)
 
+
 minetest.register_lbm({
-	name="servercleaner:abandoned_storages",
-	nodenames={"default:chest_locked","bones:bones","doors:trapdoor_steel","doors:trapdoor_steel_open","doors:door_steel_a","doors:door_steel_b"},
+	name="servercleaner:abandoned_owners",
+	nodenames=servercleaner.nodes,
 	run_at_every_load=true,
 	action=function(pos,node)
-		local meta=minetest.get_meta(pos)
-		local owner=meta:get_string("owner")
-		if not minetest.player_exists(owner) then
-			meta:set_string("owner","")
-			local def=minetest.registered_nodes[node.name]
-			if def and def.description then
-				meta:set_string("infotext", def.description .. " (Abandoned)")
-			else
-				meta:set_string("infotext", "Abandoned")
-			end
-		end
+		servercleaner.node_actions[node.name](pos,node)
 	end
 })
 
@@ -116,3 +147,13 @@ servercleaner.register_on_delete("unified_inventory",function(name)
 	unified_inventory.home_pos[name]=nil
 	unified_inventory.set_home({get_player_name=function() return "?" end},{x=0,y=0,z=0})
 end)
+
+servercleaner.register_owner_node({
+	"default:chest_locked",
+	"bones:bones",
+	"doors:trapdoor_steel",
+	"doors:trapdoor_steel_open",
+	"doors:door_steel_a",
+	"doors:door_steel_b",
+})
+

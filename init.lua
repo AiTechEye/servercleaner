@@ -1,16 +1,18 @@
 servercleaner={
 	players=365,
-	areas=minetest.get_modpath("areas")~=nil,
+	actions={},
 	}
-
 
 --revoke_moderator=90,
  --guests=7,
 --local servercleaner_storage=minetest.get_mod_storage()
 --servercleaner_storage:set_string("players",string.gsub(servercleaner_storage:get_string("players")," " .. name .." ",""))
 
-minetest.register_on_joinplayer(function(player)
-end)
+servercleaner.register_on_delete=function(mod_depends,action)
+	if minetest.get_modpath(mod_depends) then
+		servercleaner.actions[mod_depends]=action
+	end
+end
 
 minetest.register_chatcommand("delplayer", {
 	params = "<playername>",
@@ -46,23 +48,19 @@ servercleaner.delete_player=function(name,by)
 		minetest.kick_player(name, "Account Deleted")
 	end
 	minetest.after(1,function(name,by)
+
+		for i, action in pairs(servercleaner.actions) do
+			action(name)
+		end
+
 		local del=minetest.remove_player(name)
+
 		if minetest.remove_player_auth then
 			minetest.remove_player_auth(name)
 		end
-		if del==0 then
-			if servercleaner.areas then
-				for id, area in pairs(areas.areas) do
-					if areas:isAreaOwner(id, name) then
-						areas:remove(id)
-					end
-				end
-				areas:save()
-			end
 
-			if by then
-				minetest.chat_send_player(by,"player " .. name .. " deleted")
-			end
+		if by and del then
+			minetest.chat_send_player(by,"player " .. name .. " deleted")
 		end
 	end,name,by)
 end
@@ -91,3 +89,22 @@ minetest.register_lbm({
 		end
 	end
 })
+
+servercleaner.register_on_delete("areas",function(name)
+	for id, area in pairs(areas.areas) do
+		if areas:isAreaOwner(id, name) then
+			areas:remove(id)
+		end
+	end
+	areas:save()
+end)
+
+servercleaner.register_on_delete("beds",function(name)
+	beds.spawn[name]=nil
+	beds.save_spawns()
+end)
+
+servercleaner.register_on_delete("unified_inventory",function(name)
+	unified_inventory.home_pos[name]=nil
+	unified_inventory.set_home({get_player_name=function() return "?" end},{x=0,y=0,z=0})
+end)

@@ -8,6 +8,11 @@ servercleaner={
 --local servercleaner_storage=minetest.get_mod_storage()
 --servercleaner_storage:set_string("players",string.gsub(servercleaner_storage:get_string("players")," " .. name .." ",""))
 
+minetest.register_privilege("dont_delete", {
+	description = "Will not be deleted",
+	give_to_singleplayer= false,
+})
+
 servercleaner.register_on_delete=function(mod_depends,action)
 	if minetest.get_modpath(mod_depends) then
 		servercleaner.actions[mod_depends]=action
@@ -29,7 +34,7 @@ minetest.register_chatcommand("delplayer", {
 minetest.register_chatcommand("delme", {
 	description = "Delete your account",
 	func = function(name, param)
-		servercleaner.delete_player(name)
+		servercleaner.delete_player(name,name)
 	end,
 })
 
@@ -44,21 +49,24 @@ servercleaner.outdated_player=function(name)
 end
 
 servercleaner.delete_player=function(name,by)
+	if minetest.check_player_privs(name, {dont_delete=true}) then
+		if by then
+			minetest.chat_send_player(by,"player " .. name .. " has the dont_delete privilege, and will not be deleted")
+		end
+		return
+	end
+
+	for i, action in pairs(servercleaner.actions) do
+		action(name)
+	end
+
 	if minetest.get_player_by_name(name) then
 		minetest.kick_player(name, "Account Deleted")
 	end
+
 	minetest.after(1,function(name,by)
-
-		for i, action in pairs(servercleaner.actions) do
-			action(name)
-		end
-
+		minetest.remove_player_auth(name)
 		local del=minetest.remove_player(name)
-
-		if minetest.remove_player_auth then
-			minetest.remove_player_auth(name)
-		end
-
 		if by and del then
 			minetest.chat_send_player(by,"player " .. name .. " deleted")
 		end

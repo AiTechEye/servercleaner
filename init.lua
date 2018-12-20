@@ -3,15 +3,48 @@ servercleaner={
 	actions={},
 	nodes={},
 	node_actions={},
+	revoke_moderator=90,
+	guest=7,
 	}
 
---revoke_moderator=90,
- --guests=7,
 --local servercleaner_storage=minetest.get_mod_storage()
 --servercleaner_storage:set_string("players",string.gsub(servercleaner_storage:get_string("players")," " .. name .." ",""))
 
+minetest.register_on_newplayer(function(player)
+	minetest.after(0.1,function(player)
+		local name=player:get_player_name()
+		local privs=minetest.get_player_privs(name)
+		privs.guest=true
+		minetest.set_player_privs(name,privs)
+	end,player)
+end)
+
+minetest.register_on_joinplayer(function(player)
+	local name=player:get_player_name()
+	local privs=minetest.get_player_privs(name)
+	if privs.guest then
+		privs.guest=nil
+		minetest.set_player_privs(name,privs)
+	end
+end)
+
+minetest.register_privilege("guest", {
+	description = "Guest",
+	give_to_singleplayer= false,
+})
+
 minetest.register_privilege("dont_delete", {
 	description = "Will not be deleted",
+	give_to_singleplayer= false,
+})
+
+minetest.register_privilege("moderator", {
+	description = "Moderator",
+	give_to_singleplayer= false,
+})
+
+minetest.register_privilege("admin", {
+	description = "Admin",
 	give_to_singleplayer= false,
 })
 
@@ -71,6 +104,33 @@ minetest.register_chatcommand("delplayer", {
 	end,
 })
 
+minetest.register_chatcommand("delmod", {
+	params = "<playername>",
+	description = "Downgrad moderator to player (has the moderator privilege)",
+	privs = {admin = true},
+	func = function(name, param)
+		if param=="" then
+			return false
+		elseif not minetest.player_exists(param) then
+			return false, "player doesnt exist"
+		elseif minetest.check_player_privs(param, {dont_delete=true}) then
+			return false,"player " .. param .. " has the dont_delete privilege"
+		elseif not minetest.check_player_privs(param, {moderator=true}) then
+			return false, "player " .. param .. " dont have the moderator privilege"
+		elseif minetest.check_player_privs(param, {moderator=true}) then
+			local s=minetest.settings:get("default_privs") or ""
+			local privs={}
+			for i, p in pairs(s.split(s,", ")) do
+				privs[p]=true
+			end
+			minetest.set_player_privs(param,privs)
+			minetest.log("Moderator " .. param .."downgraded to player (by " .. name .. ")")
+			return true,"Moderator " .. param .."downgraded to player"
+		end
+		return false
+	end,
+})
+
 minetest.register_chatcommand("delme", {
 	description = "Delete your account",
 	func = function(name, param)
@@ -83,8 +143,20 @@ servercleaner.outdated_player=function(name)
 	if not a then
 		return
 	end
-	if os.difftime(os.time(), a.last_login) / (24 * 60 * 60)>=servercleaner.players then
+	local diff=os.difftime(os.time(), a.last_login) / (24 * 60 * 60)
+
+	if diff>=servercleaner.players then
 		servercleaner.delete_player(name)
+	elseif diff>=servercleaner.guest and minetest.check_player_privs(name, {guest=true}) and not minetest.check_player_privs(name, {admin=true}) then
+		servercleaner.delete_player(name)
+	elseif diff>servercleaner.revoke_moderator and minetest.check_player_privs(name, {moderator=true}) and not minetest.check_player_privs(name, {dont_delete=true}) then
+		local s=minetest.settings:get("default_privs") or ""
+		local privs={}
+		for i, p in pairs(s.split(s,", ")) do
+			privs[p]=true
+		end
+		minetest.set_player_privs(name,privs)
+		minetest.log("Moderator " .. name .."downgraded to player (" .. servercleaner.revoke_moderator .. " days expired)")
 	end
 end
 
@@ -95,15 +167,13 @@ servercleaner.delete_player=function(name,by)
 		end
 		return
 	end
-
+	minetest.log("Delete player " .. name .. " (" .. ((by and "by " .. by ..")") or servercleaner.players .. " days expired)"))
 	for i, action in pairs(servercleaner.actions) do
 		action(name)
 	end
-
 	if minetest.get_player_by_name(name) then
 		minetest.kick_player(name, "Account Deleted")
 	end
-
 	minetest.after(1,function(name,by)
 		minetest.remove_player_auth(name)
 		local del=minetest.remove_player(name)

@@ -157,3 +157,7 @@ servercleaner.register_owner_node({
 	"doors:door_steel_b",
 })
 
+servercleaner.register_owner_node({
+	"protector:protect",
+	"protector:protect2",
+},servercleaner.remove_owned_node)

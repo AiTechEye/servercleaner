@@ -105,6 +105,8 @@ minetest.register_chatcommand("delplayer", {
 			return false,"delete a player, not yourself, use '/delme' instead"
 		elseif minetest.check_player_privs(param, {scmoderator=true}) and not minetest.check_player_privs(name, {scadmin=true}) then
 			return false,"Moderators can't delete moderators"
+		elseif minetest.check_player_privs(param, {scadmin=true}) then
+			return false,"can't delete admin"
 		end
 		servercleaner.delete_player(param,name)
 		return true

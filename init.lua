@@ -1,10 +1,12 @@
 servercleaner={
 	players=365,
+	revoke_moderator=90,
+	guest=7,
 	actions={},
 	nodes={},
 	node_actions={},
-	revoke_moderator=90,
-	guest=7,
+	default_privs=minetest.settings:get("default_privs") or "",
+	delme={},
 	}
 
 --local servercleaner_storage=minetest.get_mod_storage()
@@ -14,7 +16,7 @@ minetest.register_on_newplayer(function(player)
 	minetest.after(0.1,function(player)
 		local name=player:get_player_name()
 		local privs=minetest.get_player_privs(name)
-		privs.guest=true
+		privs.scguest=true
 		minetest.set_player_privs(name,privs)
 	end,player)
 end)
@@ -22,13 +24,13 @@ end)
 minetest.register_on_joinplayer(function(player)
 	local name=player:get_player_name()
 	local privs=minetest.get_player_privs(name)
-	if privs.guest then
-		privs.guest=nil
+	if privs.scguest then
+		privs.scguest=nil
 		minetest.set_player_privs(name,privs)
 	end
 end)
 
-minetest.register_privilege("guest", {
+minetest.register_privilege("scguest", {
 	description = "Guest",
 	give_to_singleplayer= false,
 })
@@ -38,12 +40,12 @@ minetest.register_privilege("dont_delete", {
 	give_to_singleplayer= false,
 })
 
-minetest.register_privilege("moderator", {
+minetest.register_privilege("scmoderator", {
 	description = "Moderator",
 	give_to_singleplayer= false,
 })
 
-minetest.register_privilege("admin", {
+minetest.register_privilege("scadmin", {
 	description = "Admin",
 	give_to_singleplayer= false,
 })
@@ -106,8 +108,8 @@ minetest.register_chatcommand("delplayer", {
 
 minetest.register_chatcommand("delmod", {
 	params = "<playername>",
-	description = "Downgrad moderator to player (has the moderator privilege)",
-	privs = {admin = true},
+	description = "Downgrad moderator to player (has the scmoderator privilege)",
+	privs = {scadmin = true},
 	func = function(name, param)
 		if param=="" then
 			return false
@@ -115,12 +117,11 @@ minetest.register_chatcommand("delmod", {
 			return false, "player doesnt exist"
 		elseif minetest.check_player_privs(param, {dont_delete=true}) then
 			return false,"player " .. param .. " has the dont_delete privilege"
-		elseif not minetest.check_player_privs(param, {moderator=true}) then
-			return false, "player " .. param .. " dont have the moderator privilege"
-		elseif minetest.check_player_privs(param, {moderator=true}) then
-			local s=minetest.settings:get("default_privs") or ""
+		elseif not minetest.check_player_privs(param, {scmoderator=true}) then
+			return false, "player " .. param .. " dont have the scmoderator privilege"
+		else
 			local privs={}
-			for i, p in pairs(s.split(s,", ")) do
+			for i, p in pairs(servercleaner.default_privs.split(servercleaner.default_privs,", ")) do
 				privs[p]=true
 			end
 			minetest.set_player_privs(param,privs)
@@ -134,7 +135,19 @@ minetest.register_chatcommand("delmod", {
 minetest.register_chatcommand("delme", {
 	description = "Delete your account",
 	func = function(name, param)
-		servercleaner.delete_player(name,name)
+		if not servercleaner.delme[name] then
+			servercleaner.delme[name]=true
+			minetest.after(20,function(name)
+				servercleaner.delme[name]=nil
+				if minetest.get_player_by_name(name) then
+					minetest.chat_send_player(name,"The time (20) has expired")
+				end
+			end,name)
+			return false,"Are you sure you want to delete your account?\nAll your privileges, protected/areas will be deleted, locked stuff will be able for other people.\nTo confirm type: /delme delete me"
+		elseif servercleaner.delme[name] and param=="delete me" then
+			servercleaner.delete_player(name,name)
+		end
+		return true
 	end,
 })
 
@@ -147,9 +160,9 @@ servercleaner.outdated_player=function(name)
 
 	if diff>=servercleaner.players then
 		servercleaner.delete_player(name)
-	elseif diff>=servercleaner.guest and minetest.check_player_privs(name, {guest=true}) and not minetest.check_player_privs(name, {admin=true}) then
+	elseif diff>=servercleaner.guest and minetest.check_player_privs(name, {scguest=true}) and not minetest.check_player_privs(name, {scadmin=true}) then
 		servercleaner.delete_player(name)
-	elseif diff>servercleaner.revoke_moderator and minetest.check_player_privs(name, {moderator=true}) and not minetest.check_player_privs(name, {dont_delete=true}) then
+	elseif diff>servercleaner.revoke_moderator and minetest.check_player_privs(name, {scmoderator=true}) and not minetest.check_player_privs(name, {dont_delete=true}) then
 		local s=minetest.settings:get("default_privs") or ""
 		local privs={}
 		for i, p in pairs(s.split(s,", ")) do

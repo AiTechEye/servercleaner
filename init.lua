@@ -7,6 +7,7 @@ servercleaner={
 	node_actions={},
 	default_privs=minetest.settings:get("default_privs") or "",
 	delme={},
+	advm_user={},
 	}
 
 --local servercleaner_storage=minetest.get_mod_storage()

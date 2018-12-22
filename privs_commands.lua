@@ -18,6 +18,15 @@ minetest.register_privilege("scadmin", {
 	give_to_singleplayer= false,
 })
 
+minetest.register_chatcommand("advm", {
+	description = "Show Advanced members",
+	privs = {kick = true},
+	func = function(name, param)
+		servercleaner.advm(name)
+		return true
+	end,
+})
+
 minetest.register_chatcommand("delplayer", {
 	params = "<playername>",
 	description = "Delete player",
@@ -31,9 +40,10 @@ minetest.register_chatcommand("delplayer", {
 			return false,"Moderators can't delete moderators"
 		elseif minetest.check_player_privs(param, {scadmin=true}) then
 			return false,"can't delete admin"
+			
+		else
+			servercleaner.delete_player(param,name)
 		end
-		servercleaner.delete_player(param,name)
-		return true
 	end,
 })
 
@@ -51,10 +61,7 @@ minetest.register_chatcommand("delmod", {
 		elseif not minetest.check_player_privs(param, {scmoderator=true}) then
 			return false, "player " .. param .. " dont have the scmoderator privilege"
 		else
-			local privs={}
-			for i, p in pairs(servercleaner.default_privs.split(servercleaner.default_privs,", ")) do
-				privs[p]=true
-			end
+			local privs=minetest.string_to_privs(servercleaner.default_privs)
 			minetest.set_player_privs(param,privs)
 			minetest.log("Moderator " .. param .."downgraded to player (by " .. name .. ")")
 			return true,"Moderator " .. param .."downgraded to player"

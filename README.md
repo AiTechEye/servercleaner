@@ -2,7 +2,7 @@
 
 Version: 0.8
 
-License: code: LGPL-2.1, media: CC BY-SA-4.
+License: code: LGPL-2.1, media: CC BY-SA-4
 
 
 cleans servers

@@ -1,6 +1,6 @@
 # servercleaner
 
-Version: 0.8
+Version: 0.99
 
 License: code: LGPL-2.1, media: CC BY-SA-4
 

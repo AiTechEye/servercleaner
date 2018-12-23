@@ -139,7 +139,6 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 	end
 end)
 
-
 minetest.register_on_newplayer(function(player)
 	minetest.after(0.1,function(player)
 		local name=player:get_player_name()
@@ -240,4 +239,52 @@ servercleaner.delete_player=function(name,by)
 			minetest.chat_send_player(by,"player " .. name .. " deleted")
 		end
 	end,name,by)
+end
+
+servercleaner.unknownnodes_handler=function()
+	local remove_nodes={}
+	local exist_nodes=servercleaner.storage:load("exist_nodes")
+	local nonexists_nodes=servercleaner.storage:load("nonexists_nodes")
+	for name, value in pairs(minetest.registered_nodes) do
+		exist_nodes[name]=1
+		nonexists_nodes[name]=nil
+	end
+	for name, value in pairs(exist_nodes) do
+		if not minetest.registered_nodes[name] then
+			nonexists_nodes[name]=1
+			exist_nodes[name]=nil
+		end
+	end
+	servercleaner.storage:save("exist_nodes",exist_nodes)
+	servercleaner.storage:save("nonexists_nodes",nonexists_nodes)
+	for name, value in pairs(nonexists_nodes) do
+		table.insert(servercleaner.nonexists_nodes,name)
+	end
+end
+
+servercleaner.unknownentities_handler=function()
+	local exist_entities=servercleaner.storage:load("exist_entities")
+	local nonexists_entities=servercleaner.storage:load("nonexists_entities")
+
+	for name, value in pairs(minetest.registered_entities) do
+		exist_entities[name]=1
+		nonexists_entities[name]=nil
+	end
+
+	for name, value in pairs(exist_entities) do
+		if not minetest.registered_entities[name] then
+			nonexists_entities[name]=1
+			exist_entities[name]=nil
+		end
+	end
+
+	servercleaner.storage:save("exist_entities",exist_entities)
+	servercleaner.storage:save("nonexists_entities",nonexists_entities)
+	for name, value in pairs(nonexists_entities) do
+		minetest.register_entity(":" .. name,{
+			on_activate=function(self)
+				self.object:remove()
+			end
+		})
+	end
 end

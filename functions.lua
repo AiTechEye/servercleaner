@@ -1,76 +1,141 @@
 servercleaner.advm=function(username,msg)
 	msg=msg or ""
 	local p=minetest.get_player_privs(username)
+	servercleaner.advm_user[username]=servercleaner.advm_user[username] or {index=1,pfilter=1,id=0}
+
+
 	local gui="size[20,10]"
 
 	.. "label[0,1.5;" .. minetest.colorize("#8833FF","scadmin") .. "]"
-	.. "label[1.3,1.5;" .. minetest.colorize("#FF8888","scmoderator") .. "]"
-	.. "label[3,1.5;" .. minetest.colorize("#777777","not defined") .. "]"
+	.. "label[1.1,1.5;" .. minetest.colorize("#FF8888","scmoderator") .. "]"
+	.. "label[2.6,1.5;" .. minetest.colorize("#777777","not defined") .. "]"
+	.. "label[4,1.5;" .. minetest.colorize("#7777FF","new") .. "]"
 	.. "label[4.5,1.5;" .. minetest.colorize("#00FF00",msg) .. "]"
-	.. (p.scadmin and "button[0,0;3,1;del;Delete]" or "")
-	.. (p.scadmin and "button[0,0.7;3,1;delmod;Downgrad to player]" or "")
-	.. (p.privs and "button[3,0;3,1;gmod;Grant scmoderator]" or "")
-	.. (p.privs and "button[3,0.7;3,1;rmod;Revoke scmoderator]" or "")
-	.. (p.privs and "button[6,0;3,1;gad;Grant scadmin]" or "")
-	.. (p.privs and "button[6,0.7;3,1;rad;Revoke scadmin]" or "")
-	.. (p.privs and "button[9,0;3,1;gd;Grant dont_delete #]" or "")
-	.. (p.privs and "button[9,0.7;3,1;rd;Revoke dont_delete #]" or "")
-	.. (p.privs and "button[12,0;2,1;grant;Grant:]" or "")
-	.. (p.privs and "button[12,0.7;2,1;revoke;Revoke:]" or "")
+
+	 .. "textlist[0,-0.3;2.5,1.7;pfilter;Advanced members,Active players;" .. servercleaner.advm_user[username].pfilter .. "]"
+	.. (p.ban and "textlist[2.5,-0.3;2.5,1.7;del;Delete," .. (p.scadmin and "Downgrad to player" or "") .."]" or "")
+	.. (p.privs and "textlist[5,-0.3;2.5,1.7;addadv;#FF8888+ scmoderator,#FF8888- scmoderator,#8833FF+ scadmin,#8833FF- scadmin,+ dont_delete #,- dont_delete #]" or "")
+	.. (p.privs and "button[7.5.,0.4;1,1;grant;Grant]" or "")
+	.. (p.privs and "button[8.2,0.4;1.3,1;revoke;Revoke]" or "")
 
 	local dprivs=minetest.string_to_privs(servercleaner.default_privs)
 	local all={}
 	local list=""
 	local is=0
+	local cmds=""
 	local privslist=""
 
-	for name, value in minetest.get_auth_handler().iterate() do
-		local privs=minetest.get_player_privs(name)
-		for priv, tr in pairs(privs) do
-			if not dprivs[priv] and priv~="scguest" then
-				is=is+1
-				local p2s=name
-				if privs.dont_delete then
-					p2s=p2s .."  #  "
-				else
-					p2s=p2s .."     "
-				end
 
-				p2s=p2s .. minetest.privs_to_string(privs):gsub(","," ") ..","
+	if servercleaner.advm_user[username].pfilter==1 then
+		for name, value in minetest.get_auth_handler().iterate() do
+			local privs=minetest.get_player_privs(name)
+			for priv, tr in pairs(privs) do
+				if not dprivs[priv] and priv~="scguest" then
+					is=is+1
+					local p2s=name
+					if privs.dont_delete then
+						p2s=p2s .."  #  "
+					else
+						p2s=p2s .."     "
+					end
 
-				if privs.scadmin then
-					list=list .. "#8833FF" .. p2s
-				elseif privs.scmoderator then
-					list=list  .."#FF8888" .. p2s
-				else
-					list=list .."#777777" .. p2s
+					p2s=p2s .. minetest.privs_to_string(privs):gsub(","," ") ..","
+
+					if privs.scadmin then
+						list=list .. "#8833FF" .. p2s
+					elseif privs.scmoderator then
+						list=list  .."#FF8888" .. p2s
+					else
+						list=list .."#777777" .. p2s
+					end
+					all[is]=name
+					break
 				end
-				all[is]=name
-				break
 			end
 		end
+
+	else
+
+		for _, player in pairs(minetest.get_connected_players()) do
+			local name=player:get_player_name()
+			local privs=minetest.get_player_privs(name)
+			is=is+1
+			local pset
+			local p2s=name
+			if privs.dont_delete then
+				p2s=p2s .."  #  "
+			else
+				p2s=p2s .."     "
+			end
+			p2s=p2s .. minetest.privs_to_string(privs):gsub(","," ") ..","
+			if privs.scadmin then
+				list=list .. "#8833FF" .. p2s
+				pset=true
+			elseif privs.scmoderator then
+				list=list  .."#FF8888" .. p2s
+				pset=true
+			else
+				for priv, tr in pairs(privs) do
+					if not dprivs[priv] and priv~="scguest" then
+						list=list .."#777777" .. p2s
+						pset=true
+						break
+					end
+				end
+			end
+			if privs.scguest and not pset then
+				list=list .."#7777FF" .. p2s
+				all[is]=name
+				break
+			elseif not pset then
+				list=list .. p2s
+			end
+			all[is]=name
+		end
+
 	end
+
 
 	for name, value in pairs(minetest.registered_privileges) do
 		privslist=privslist .. name .. ","
 	end
+	for name, v in pairs(minetest.registered_chatcommands) do
+		if minetest.check_player_privs(username, v.privs) then
+			cmds=cmds .. name .. ","
+		end
+	end
 
+	cmds=cmds:sub(0,cmds:len()-1)
 	list=list:sub(0,list:len()-1)
 	privslist=privslist:sub(0,privslist:len()-1)
 
 	gui=gui .. "textlist[0,2;20,8;members;" .. list .."]"
-	.. (p.privs and "dropdown[14,0;3,1;privs;" .. privslist ..";1]" or "")
+	.. (p.privs and "dropdown[7.5,-0.2;3,1;privs;" .. privslist ..";1]" or "")
+	.. "dropdown[10.3,-0.2;3,1;runcommand;" .. cmds ..";1]"
 
-	servercleaner.advm_user[username]=servercleaner.advm_user[username] or {index=1}
 	servercleaner.advm_user[username].list=all
+
 	minetest.after(0.1, function(gui,username)
+		if servercleaner.advm_user[username] then
 			return minetest.show_formspec(username, "servercleaner.advm",gui)
+		end
 	end, gui,username)
+
+	if servercleaner.advm_user[username].pfilter==2 then
+		local id=servercleaner.advm_user[username].id
+		minetest.after(1, function(username,msg,id)
+			if servercleaner.advm_user[username]
+			and servercleaner.advm_user[username].id==id
+			and servercleaner.advm_user[username].pfilter==2 then
+				servercleaner.advm(username,msg)
+			end
+		end, username,msg,id)
+	end
 end
 
 servercleaner.runcmd=function(cmd,name,param)
 	local c=minetest.registered_chatcommands[cmd]
-	local p1,p2=minetest.check_player_privs(name, minetest.get_player_privs(name))
+	local p1,p2=minetest.check_player_privs(name, c.privs)
 	local msg=""
 	local a
 	if not p1 then
@@ -100,41 +165,60 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 			local p=minetest.privs_to_string(minetest.get_player_privs(mname))
 			local gp=p:gsub(",",", ")
 			minetest.chat_send_player(name,"Privileges of " .. minetest.colorize("#00ff00",mname) .. "\n" .. gp)
+			servercleaner.advm_user[name].id=servercleaner.advm_user[name].id+1
 			servercleaner.advm(name,gp)
 			return
+		elseif pressed.pfilter and pressed.pfilter~="IMV" then
+			local n=pressed.pfilter:gsub("CHG:","")
+			servercleaner.advm_user[name].pfilter=tonumber(n)
+			servercleaner.advm_user[name].id=servercleaner.advm_user[name].id+1
+			servercleaner.advm(name)
+			return
 		end
+
+
 		local mname=servercleaner.advm_user[name].list[servercleaner.advm_user[name].index]
 		local msg=""
+		if not mname then
+			return
+		end
+
 
 		if pressed.grant then
 			msg=servercleaner.runcmd("grant",name,mname .." " .. pressed.privs)
 		elseif pressed.revoke then
 			msg=servercleaner.runcmd("revoke",name,mname .." " .. pressed.privs)
-		elseif pressed.del then
+		elseif pressed.del=="CHG:1" then
 			msg=servercleaner.runcmd("delplayer",name,mname)
 			minetest.after(1.1, function(name,msg)
 				if servercleaner.advm_user[name] then
+					servercleaner.advm_user[name].id=servercleaner.advm_user[name].id+1
 					servercleaner.advm(name,msg)
 				end
 			end, name,msg)
 			return
-		elseif pressed.delmod then
+		elseif pressed.del=="CHG:2" then
 			msg=servercleaner.runcmd("delmod",name,mname)
-		elseif pressed.gmod then
+		elseif pressed.addadv=="CHG:1" then
 			msg=servercleaner.runcmd("grant",name,mname .." scmoderator")
-		elseif pressed.gad then
-			msg=servercleaner.runcmd("grant",name,mname .." scadmin")
-		elseif pressed.rmod then
+		elseif pressed.addadv=="CHG:2" then
 			msg=servercleaner.runcmd("revoke",name,mname .." scmoderator")
-		elseif pressed.rad then
+		elseif pressed.addadv=="CHG:3" then
+			msg=servercleaner.runcmd("grant",name,mname .." scadmin")
+		elseif pressed.addadv=="CHG:4" then
 			msg=servercleaner.runcmd("revoke",name,mname .." scadmin")
-		elseif pressed.gd then
+		elseif pressed.addadv=="CHG:5" then
 			msg=servercleaner.runcmd("grant",name,mname .." dont_delete")
-		elseif pressed.rd then
+		elseif pressed.addadv=="CHG:6" then
 			msg=servercleaner.runcmd("revoke",name,mname .." dont_delete")
 		else
 			return
 		end
+
+		if (pressed.del or pressed.addadv) then
+			minetest.close_formspec(name,"servercleaner.advm")
+		end
+		servercleaner.advm_user[name].id=servercleaner.advm_user[name].id+1
 		servercleaner.advm(name,msg)
 	end
 end)
@@ -154,6 +238,13 @@ minetest.register_on_joinplayer(function(player)
 	if privs.scguest then
 		privs.scguest=nil
 		minetest.set_player_privs(name,privs)
+	end
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	local name=player:get_player_name()
+	if servercleaner.advm_user[name] then
+		servercleaner.advm_user[name]=nil
 	end
 end)
 

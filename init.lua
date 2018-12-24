@@ -9,6 +9,7 @@ servercleaner={
 	delme={},
 	advm_user={},
 	nonexists_nodes={},
+	nonexists_nodes_list={},
 	storage={
 		save=function(data,key,newdata)
 			data.storage:set_string(key,minetest.serialize(newdata))
@@ -48,12 +49,8 @@ minetest.after(0.1,function()
 	--end
 end)
 
-
-
-servercleaner.nonexists_nodes2del={}
-
 for name, value in pairs(servercleaner.storage:load("nonexists_nodes")) do
-	servercleaner.nonexists_nodes2del[name]=1
+	servercleaner.nonexists_nodes_list[name]=1
 	table.insert(servercleaner.nonexists_nodes,name)
 end
 
@@ -64,8 +61,8 @@ minetest.register_lbm({
 	action=function(pos,node)
 		if not minetest.registered_nodes[node.name] then
 			minetest.remove_node(pos)
-		elseif servercleaner.nonexists_nodes2del[node.name] then
-			servercleaner.nonexists_nodes2del[node.name]=nil
+		elseif servercleaner.nonexists_nodes_list[node.name] then
+			servercleaner.nonexists_nodes_list[node.name]=nil
 
 			local exist_nodes=servercleaner.storage:load("exist_nodes")
 			local nonexists_nodes=servercleaner.storage:load("nonexists_nodes")

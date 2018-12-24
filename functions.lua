@@ -350,8 +350,17 @@ servercleaner.unknownnodes_handler=function()
 	servercleaner.storage:save("exist_nodes",exist_nodes)
 	servercleaner.storage:save("nonexists_nodes",nonexists_nodes)
 	for name, value in pairs(nonexists_nodes) do
-		table.insert(servercleaner.nonexists_nodes,name)
+		table.insert(remove_nodes,name)
 	end
+
+	minetest.register_lbm({
+		name=":servercleaner:nonexists_nodes",
+		nodenames=remove_nodes,
+		run_at_every_load=true,
+		action=function(pos,node)
+			minetest.remove_node(pos)
+		end
+	})
 end
 
 servercleaner.unknownentities_handler=function()
@@ -369,7 +378,6 @@ servercleaner.unknownentities_handler=function()
 			exist_entities[name]=nil
 		end
 	end
-
 	servercleaner.storage:save("exist_entities",exist_entities)
 	servercleaner.storage:save("nonexists_entities",nonexists_entities)
 	for name, value in pairs(nonexists_entities) do

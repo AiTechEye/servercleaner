@@ -34,6 +34,8 @@ minetest.register_lbm({
 	end
 })
 
+
+
 minetest.after(0.1,function()
 	for name, value in minetest.get_auth_handler().iterate() do
 		servercleaner.outdated_player(name)

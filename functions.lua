@@ -1,8 +1,8 @@
-servercleaner.advm=function(username,msg)
+servercleaner.advm=function(username,msg,text)
 	msg=msg or ""
+	text=text or ""
 	local p=minetest.get_player_privs(username)
 	servercleaner.advm_user[username]=servercleaner.advm_user[username] or {index=1,pfilter=1,id=0}
-
 
 	local gui="size[20,10]"
 
@@ -15,14 +15,17 @@ servercleaner.advm=function(username,msg)
 	 .. "textlist[0,-0.3;2.5,1.7;pfilter;Advanced members,Active players;" .. servercleaner.advm_user[username].pfilter .. "]"
 	.. (p.ban and "textlist[2.5,-0.3;2.5,1.7;del;Delete," .. (p.scadmin and "Downgrad to player" or "") .."]" or "")
 	.. (p.privs and "textlist[5,-0.3;2.5,1.7;addadv;#FF8888+ scmoderator,#FF8888- scmoderator,#8833FF+ scadmin,#8833FF- scadmin,+ dont_delete #,- dont_delete #]" or "")
-	.. (p.privs and "button[7.5.,0.4;1,1;grant;Grant]" or "")
+	.. (p.privs and "button[7.5,0.4;1,1;grant;Grant]" or "")
 	.. (p.privs and "button[8.2,0.4;1.3,1;revoke;Revoke]" or "")
+
+	.. "field[10.5,0.7;3,1;cmdtext;;" .. text .. "]"
+
 
 	local dprivs=minetest.string_to_privs(servercleaner.default_privs)
 	local all={}
 	local list=""
 	local is=0
-	local cmds=""
+	local cmds=","
 	local privslist=""
 
 
@@ -32,22 +35,10 @@ servercleaner.advm=function(username,msg)
 			for priv, tr in pairs(privs) do
 				if not dprivs[priv] and priv~="scguest" then
 					is=is+1
-					local p2s=name
-					if privs.dont_delete then
-						p2s=p2s .."  #  "
-					else
-						p2s=p2s .."     "
-					end
+					local p2s=name .. (privs.dont_delete and "  #  " or "     ")  .. minetest.privs_to_string(privs):gsub(","," ") ..","
 
-					p2s=p2s .. minetest.privs_to_string(privs):gsub(","," ") ..","
+					list=list .. ((privs.scadmin and "#8833FF") or (privs.scmoderator and "#FF8888") or "#777777") .. p2s
 
-					if privs.scadmin then
-						list=list .. "#8833FF" .. p2s
-					elseif privs.scmoderator then
-						list=list  .."#FF8888" .. p2s
-					else
-						list=list .."#777777" .. p2s
-					end
 					all[is]=name
 					break
 				end
@@ -61,13 +52,7 @@ servercleaner.advm=function(username,msg)
 			local privs=minetest.get_player_privs(name)
 			is=is+1
 			local pset
-			local p2s=name
-			if privs.dont_delete then
-				p2s=p2s .."  #  "
-			else
-				p2s=p2s .."     "
-			end
-			p2s=p2s .. minetest.privs_to_string(privs):gsub(","," ") ..","
+			local p2s=name .. (privs.dont_delete and "  #  " or "     ") .. minetest.privs_to_string(privs):gsub(","," ") ..","
 			if privs.scadmin then
 				list=list .. "#8833FF" .. p2s
 				pset=true
@@ -85,8 +70,6 @@ servercleaner.advm=function(username,msg)
 			end
 			if privs.scguest and not pset then
 				list=list .."#7777FF" .. p2s
-				all[is]=name
-				break
 			elseif not pset then
 				list=list .. p2s
 			end
@@ -111,7 +94,7 @@ servercleaner.advm=function(username,msg)
 
 	gui=gui .. "textlist[0,2;20,8;members;" .. list .."]"
 	.. (p.privs and "dropdown[7.5,-0.2;3,1;privs;" .. privslist ..";1]" or "")
-	.. "dropdown[10.3,-0.2;3,1;runcommand;" .. cmds ..";1]"
+	.. "dropdown[10.3,-0.2;3,1;cmdname;" .. cmds ..";1]"
 
 	servercleaner.advm_user[username].list=all
 
@@ -135,7 +118,11 @@ end
 
 servercleaner.runcmd=function(cmd,name,param)
 	local c=minetest.registered_chatcommands[cmd]
-	local p1,p2=minetest.check_player_privs(name, c.privs)
+	if not c then
+		minetest.chat_send_all("<"..name.."> " .. cmd .." " .. param)
+		return "<"..name.."> " .. cmd .." " .. param
+	end
+	local p1=minetest.check_player_privs(name, c.privs)
 	local msg=""
 	local a
 	if not p1 then
@@ -150,9 +137,10 @@ servercleaner.runcmd=function(cmd,name,param)
 end
 
 minetest.register_on_player_receive_fields(function(user, form, pressed)
+
 	if form=="servercleaner.advm" then
 		local name=user:get_player_name()
-		if pressed.quit or not servercleaner.advm_user[name] then
+		if (pressed.quit and not pressed.key_enter) or not servercleaner.advm_user[name] then
 			servercleaner.advm_user[name]=nil
 			return
 		elseif pressed.members and pressed.members~="IMV" then
@@ -179,12 +167,21 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 
 		local mname=servercleaner.advm_user[name].list[servercleaner.advm_user[name].index]
 		local msg=""
+		local text=""
 		if not mname then
 			return
 		end
 
-
-		if pressed.grant then
+		if not pressed.key_enter and pressed.cmdname and pressed.cmdname~="" then
+			local c=minetest.registered_chatcommands[pressed.cmdname]
+			if c then
+				msg=c.params
+				text=pressed.cmdname
+			end
+		elseif pressed.cmdtext and pressed.key_enter and pressed.cmdtext:len()>0 then
+			local a=pressed.cmdtext
+			msg=servercleaner.runcmd(a:find(" ") and a:sub(1,a:find(" ")-1) or a,name,a:find(" ") and a:sub(a:find(" ")+1,a:len()) or "")
+		elseif pressed.grant then
 			msg=servercleaner.runcmd("grant",name,mname .." " .. pressed.privs)
 		elseif pressed.revoke then
 			msg=servercleaner.runcmd("revoke",name,mname .." " .. pressed.privs)
@@ -218,8 +215,12 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 		if (pressed.del or pressed.addadv) then
 			minetest.close_formspec(name,"servercleaner.advm")
 		end
+
+		msg=msg:gsub("%[","|")
+		msg=msg:gsub("%]","|")
+
 		servercleaner.advm_user[name].id=servercleaner.advm_user[name].id+1
-		servercleaner.advm(name,msg)
+		servercleaner.advm(name,msg,text)
 	end
 end)
 

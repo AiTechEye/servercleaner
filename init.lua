@@ -6,6 +6,7 @@ servercleaner={
 	nodes={},
 	node_actions={},
 	default_privs=minetest.settings:get("default_privs") or "",
+	server_owner={[minetest.settings:get("name")]=true,singleplayer=true},
 	delme={},
 	advm_user={},
 	storage={

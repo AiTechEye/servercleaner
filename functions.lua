@@ -6,11 +6,12 @@ servercleaner.advm=function(username,msg,text)
 
 	local gui="size[20,10]"
 
-	.. "label[0,1.5;" .. minetest.colorize("#8833FF","scadmin") .. "]"
-	.. "label[1.1,1.5;" .. minetest.colorize("#FF8888","scmoderator") .. "]"
-	.. "label[2.6,1.5;" .. minetest.colorize("#777777","not defined") .. "]"
-	.. "label[4,1.5;" .. minetest.colorize("#7777FF","new") .. "]"
-	.. "label[4.5,1.5;" .. minetest.colorize("#00FF00",msg) .. "]"
+	.. "label[0,1.5;" .. minetest.colorize("#ff7700","Owner") .. "]"
+	.. "label[0.8,1.5;" .. minetest.colorize("#8833FF","scadmin") .. "]"
+	.. "label[1.8,1.5;" .. minetest.colorize("#FF8888","scmoderator") .. "]"
+	.. "label[3.2,1.5;" .. minetest.colorize("#777777","not defined") .. "]"
+	.. "label[4.5,1.5;" .. minetest.colorize("#7777FF","new") .. "]"
+	.. "label[5,1.5;" .. minetest.colorize("#00FF00",msg) .. "]"
 
 	 .. "textlist[0,-0.3;2.5,1.7;pfilter;Advanced members,Active players;" .. servercleaner.advm_user[username].pfilter .. "]"
 	.. (p.ban and "textlist[2.5,-0.3;2.5,1.7;del;Delete," .. (p.scadmin and "Downgrad to player" or "") .."]" or "")
@@ -39,7 +40,7 @@ servercleaner.advm=function(username,msg,text)
 					is=is+1
 					local p2s=name .. (privs.dont_delete and "  #  " or "     ")  .. minetest.privs_to_string(privs):gsub(","," ") ..","
 
-					list=list .. ((privs.scadmin and "#8833FF") or (privs.scmoderator and "#FF8888") or "#777777") .. p2s
+					list=list .. ((servercleaner.server_owner[name] and "#ff7700") or (privs.scadmin and "#8833FF") or (privs.scmoderator and "#FF8888") or "#777777") .. p2s
 
 					all[is]=name
 					break
@@ -55,7 +56,11 @@ servercleaner.advm=function(username,msg,text)
 			is=is+1
 			local pset
 			local p2s=name .. (privs.dont_delete and "  #  " or "     ") .. minetest.privs_to_string(privs):gsub(","," ") ..","
-			if privs.scadmin then
+
+			if servercleaner.server_owner[name] then
+				list=list .. "#ff7700" .. p2s
+				pset=true
+			elseif privs.scadmin then
 				list=list .. "#8833FF" .. p2s
 				pset=true
 			elseif privs.scmoderator then
@@ -352,7 +357,7 @@ end
 
 servercleaner.outdated_player=function(name)
 	local a=minetest.get_auth_handler().get_auth(name)
-	if not a then
+	if not a or servercleaner.server_owner[name] then
 		return
 	end
 	local diff=os.difftime(os.time(), a.last_login) / (24 * 60 * 60)
@@ -368,9 +373,9 @@ servercleaner.outdated_player=function(name)
 end
 
 servercleaner.delete_player=function(name,by)
-	if minetest.check_player_privs(name, {dont_delete=true}) then
+	if minetest.check_player_privs(name, {dont_delete=true}) or servercleaner.server_owner[name] then
 		if by then
-			minetest.chat_send_player(by,"player " .. name .. " has the dont_delete privilege, and will not be deleted")
+			minetest.chat_send_player(by,"player " .. name .. ((servercleaner.server_owner[name] and " is serverowner") or " has the dont_delete privilege") .. ", and will not be deleted")
 		end
 		return
 	end

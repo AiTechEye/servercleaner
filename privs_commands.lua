@@ -65,7 +65,10 @@ minetest.register_chatcommand("delmod", {
 
 		local player=minetest.get_player_privs(param)
 
-		if user.privs then
+
+		if servercleaner.server_owner[param] then
+			return false,"can't downgraded server owner"
+		elseif user.privs then
 		elseif user.scadmin and (player.scadmin or player.privs) then
 			return false,"You can't downgrade admins"
 		elseif user.scmoderator and (player.scmoderator or player.scadmin or player.privs) then

@@ -9,10 +9,9 @@ cleans servers
 
 Commands:
 
-/delplayer <name> delete a player requeres ban (and scadmin to moderators)
+/delplayer <name> delete a player requeres ban (and scadmin to moderators...)
 /delme delete your self, type "/delme delete me" again to confirm
-/delmod<name> Downgrades
-moderator to player (if the moderator has the scmoderator privilege) requeres scadmin
+/delmod<name> Downgrade <name> to player requeres ban, scadmin or scmoderator privs...
 /advm (manage "advanced members")
 /clobjectschecks for unknown entities around you
 

@@ -88,3 +88,14 @@ minetest.register_chatcommand("delme", {
 		return true
 	end,
 })
+
+minetest.register_chatcommand("clobjects", {
+	description = "Check and clear unknown objects",
+	func = function(name, param)
+		local player=minetest.get_player_by_name(name)
+		if not player then
+			return
+		end
+		servercleaner.uobjects(player:get_pos(),name)
+	end,
+})

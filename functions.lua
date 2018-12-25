@@ -18,6 +18,8 @@ servercleaner.advm=function(username,msg,text)
 	.. (p.privs and "button[7.5,0.4;1,1;grant;Grant]" or "")
 	.. (p.privs and "button[8.2,0.4;1.3,1;revoke;Revoke]" or "")
 
+	.. "button[13,-0.3;2,1;clearob;ClObjects]"
+
 	.. "field[10.5,0.7;3,1;cmdtext;;" .. text .. "]"
 
 
@@ -181,6 +183,8 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 		elseif pressed.cmdtext and pressed.key_enter and pressed.cmdtext:len()>0 then
 			local a=pressed.cmdtext
 			msg=servercleaner.runcmd(a:find(" ") and a:sub(1,a:find(" ")-1) or a,name,a:find(" ") and a:sub(a:find(" ")+1,a:len()) or "")
+		elseif pressed.clearob then
+			msg=servercleaner.runcmd("clobjects",name,"")
 		elseif pressed.grant then
 			msg=servercleaner.runcmd("grant",name,mname .." " .. pressed.privs)
 		elseif pressed.revoke then
@@ -232,6 +236,59 @@ minetest.register_on_newplayer(function(player)
 		minetest.set_player_privs(name,privs)
 	end,player)
 end)
+
+
+minetest.register_on_punchnode(function(pos,node,player,pointed_thing)
+	if not minetest.registered_nodes[node.name] then
+		local exist_nodes=servercleaner.storage:load("exist_nodes")
+		local nonexists_nodes=servercleaner.storage:load("nonexists_nodes")
+		local n=0
+		for y=-50,50,1 do
+		for x=-50,50,1 do
+		for z=-50,50,1 do
+			local p={x=pos.x+x,y=pos.y+y,z=pos.z+z}
+			local cc=vector.length(vector.new({x=x,y=y,z=z}))/50
+			local name=minetest.get_node(p).name
+			if not minetest.registered_nodes[name] then
+				if not nonexists_nodes[name] then
+					n=n+1
+				end
+				nonexists_nodes[name]=1
+				exist_nodes[name]=nil
+				minetest.remove_node(p)
+
+			end
+		end
+		end
+		end
+		servercleaner.storage:save("exist_nodes",exist_nodes)
+		servercleaner.storage:save("nonexists_nodes",nonexists_nodes)
+		minetest.chat_send_player(player:get_player_name(),n .. " unknown nodes added to the filter and will be automatically removed to next start")
+		servercleaner.uobjects(pos,player:get_player_name())
+	end
+end)
+
+servercleaner.uobjects=function(pos,name)
+	local exist_entities=servercleaner.storage:load("exist_entities")
+	local nonexists_entities=servercleaner.storage:load("nonexists_entities")
+	local n=0
+	for _, ob in ipairs(minetest.get_objects_inside_radius(pos, 100)) do
+		if not (ob:is_player() or minetest.registered_entities[ob:get_entity_name()]) then
+			local en=ob:get_entity_name()
+			if not nonexists_entities[en] then
+				n=n+1
+			end
+			nonexists_entities[en]=1
+			exist_entities[en]=nil
+			ob:remove()
+		end
+	end
+	if n>0 then
+		servercleaner.storage:save("exist_entities",exist_entities)
+		servercleaner.storage:save("nonexists_entities",nonexists_entities)
+		minetest.chat_send_player(name,n .. " unknown objects added to the filter and will be automatically removed to next start")
+	end
+end
 
 minetest.register_on_joinplayer(function(player)
 	local name=player:get_player_name()

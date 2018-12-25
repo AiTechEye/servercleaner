@@ -1,3 +1,49 @@
+servercleaner.unknownhandler=function(username)
+	servercleaner.advm_user[username]=servercleaner.advm_user[username] or {list={},index=1,pfilter=1}
+
+	local gui="size[20,10]"
+
+	.. "label[0,1.5;" .. minetest.colorize("#FF8888","Nodes") .. "]"
+	.. "label[0.8,1.5;" .. minetest.colorize("#8833FF","Objects") .. "]"
+	--.. "label[1.8,1.5;" .. minetest.colorize("#FF8888","scmoderator") .. "]"
+	--.. "label[3.2,1.5;" .. minetest.colorize("#777777","not defined") .. "]"
+	--.. "label[4.5,1.5;" .. minetest.colorize("#7777FF","new") .. "]"
+
+
+	.. "button[0,-0.2;1.3,1;del;Delete]"
+	.. "button[1,-0.2;1.3,1;sca;Scan]"
+
+	local list=""
+	local n=0
+	local all={}
+
+	for name, value in pairs(servercleaner.storage:load("nonexists_nodes")) do
+		n=n+1
+		list=list .. "#FF8888" .. name .."   Updated:   " .. os.date("!%Y-%m-%d %H:%M.%S",value) .. ","
+		table.insert(all,name)
+	end
+	for name, value in pairs(servercleaner.storage:load("nonexists_entities")) do
+		n=n+1
+		list=list .. "#8833FF" .. name .."   Updated:   " .. os.date("!%Y-%m-%d %H:%M.%S",value) .. ","
+		table.insert(all,name)
+	end
+
+	list=list:sub(0,list:len()-1)
+
+	gui=gui .. "textlist[0,2;20,8;list;" .. list .."]"
+	.. "label[5,1.5;" .. minetest.colorize("#00FF00",n) .. "]"
+
+	servercleaner.advm_user[username].list=all
+
+	minetest.after(0.1, function(gui,username)
+		if servercleaner.advm_user[username] then
+			return minetest.show_formspec(username, "servercleaner.unknownhandler",gui)
+		end
+	end, gui,username)
+end
+
+
+
 servercleaner.advm=function(username,msg,text)
 	msg=msg or ""
 	text=text or ""
@@ -230,6 +276,27 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 
 		servercleaner.advm_user[name].id=servercleaner.advm_user[name].id+1
 		servercleaner.advm(name,msg,text)
+	elseif form=="servercleaner.unknownhandler" then
+		local name=user:get_player_name()
+		if (pressed.quit and not pressed.key_enter) or not servercleaner.advm_user[name] then
+			servercleaner.advm_user[name]=nil
+			return
+		elseif pressed.del then
+			local ob=servercleaner.advm_user[name].list[servercleaner.advm_user[name].index]
+			local nonexists_entities=servercleaner.storage:load("nonexists_entities")
+			local nonexists_nodes=servercleaner.storage:load("nonexists_nodes")
+			nonexists_entities[ob]=nil
+			nonexists_nodes[ob]=nil
+			servercleaner.storage:save("nonexists_entities",nonexists_entities)
+			servercleaner.storage:save("nonexists_nodes",nonexists_nodes)
+			servercleaner.unknownhandler(name)
+		elseif pressed.list and pressed.list.members~="IMV" then
+			local n=pressed.list:gsub("CHG:","")
+			servercleaner.advm_user[name].index=tonumber(n)
+		elseif pressed.sca then
+			servercleaner.runcmd("clobjects",name,"")
+			servercleaner.unknownhandler(name)
+		end
 	end
 end)
 
@@ -408,11 +475,18 @@ servercleaner.unknownnodes_handler=function()
 			exist_nodes[name]=nil
 		end
 	end
-	servercleaner.storage:save("exist_nodes",exist_nodes)
-	servercleaner.storage:save("nonexists_nodes",nonexists_nodes)
+
 	for name, value in pairs(nonexists_nodes) do
+		if value==1 then
+			nonexists_nodes[name]=os.time()
+		elseif (os.difftime(os.time(), value) / (24 * 60 * 60))>servercleaner.unknown_filtertime then
+			nonexists_nodes[name]=nil
+		end
 		table.insert(remove_nodes,name)
 	end
+
+	servercleaner.storage:save("exist_nodes",exist_nodes)
+	servercleaner.storage:save("nonexists_nodes",nonexists_nodes)
 
 	minetest.register_lbm({
 		name=":servercleaner:nonexists_nodes",
@@ -420,6 +494,19 @@ servercleaner.unknownnodes_handler=function()
 		run_at_every_load=true,
 		action=function(pos,node)
 			minetest.remove_node(pos)
+			if not servercleaner.updating.nodes then
+				servercleaner.updating.nodes={[node.name]=os.time()}
+				minetest.after(5,function()
+					local nonexists_nodes=servercleaner.storage:load("nonexists_nodes")
+					for name, value in pairs(servercleaner.updating.nodes) do
+						nonexists_nodes[name]=value
+					end
+					servercleaner.storage:save("nonexists_nodes",nonexists_nodes)
+					servercleaner.updating.nodes=nil
+				end)
+			else
+				servercleaner.updating.nodes[node.name]=os.time()
+			end
 		end
 	})
 end
@@ -439,13 +526,33 @@ servercleaner.unknownentities_handler=function()
 			exist_entities[name]=nil
 		end
 	end
-	servercleaner.storage:save("exist_entities",exist_entities)
-	servercleaner.storage:save("nonexists_entities",nonexists_entities)
+
 	for name, value in pairs(nonexists_entities) do
+		if value==1 then
+			nonexists_entities[name]=os.time()
+		elseif (os.difftime(os.time(), value) / (24 * 60 * 60))>servercleaner.unknown_filtertime then
+			nonexists_entities[name]=nil
+		end
+
 		minetest.register_entity(":" .. name,{
 			on_activate=function(self)
+				if not servercleaner.updating.entities then
+					servercleaner.updating.entities={[self.name]=os.time()}
+					minetest.after(5,function()
+						local nonexists_entities=servercleaner.storage:load("nonexists_entities")
+						for name, value in pairs(servercleaner.updating.entities) do
+							nonexists_entities[name]=value
+						end
+						servercleaner.storage:save("nonexists_entities",nonexists_entities)
+						servercleaner.updating.entities=nil
+					end)
+				else
+					servercleaner.updating.entities[self.name]=os.time()
+				end
 				self.object:remove()
 			end
 		})
 	end
+	servercleaner.storage:save("exist_entities",exist_entities)
+	servercleaner.storage:save("nonexists_entities",nonexists_entities)
 end

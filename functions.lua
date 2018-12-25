@@ -258,10 +258,9 @@ minetest.register_on_punchnode(function(pos,node,player,pointed_thing)
 				if not nonexists_nodes[name] then
 					n=n+1
 				end
-				nonexists_nodes[name]=1
+				nonexists_nodes[name]=os.time()
 				exist_nodes[name]=nil
 				minetest.remove_node(p)
-
 			end
 		end
 		end
@@ -283,7 +282,7 @@ servercleaner.uobjects=function(pos,name)
 			if not nonexists_entities[en] then
 				n=n+1
 			end
-			nonexists_entities[en]=1
+			nonexists_entities[en]=os.time()
 			exist_entities[en]=nil
 			ob:remove()
 		end
@@ -405,7 +404,7 @@ servercleaner.unknownnodes_handler=function()
 	end
 	for name, value in pairs(exist_nodes) do
 		if not minetest.registered_nodes[name] then
-			nonexists_nodes[name]=1
+			nonexists_nodes[name]=os.time()
 			exist_nodes[name]=nil
 		end
 	end
@@ -436,7 +435,7 @@ servercleaner.unknownentities_handler=function()
 
 	for name, value in pairs(exist_entities) do
 		if not minetest.registered_entities[name] then
-			nonexists_entities[name]=1
+			nonexists_entities[name]=os.time()
 			exist_entities[name]=nil
 		end
 	end

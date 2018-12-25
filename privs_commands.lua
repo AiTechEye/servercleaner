@@ -38,7 +38,7 @@ minetest.register_chatcommand("delplayer", {
 			return false,"delete a player, not yourself, use '/delme' instead"
 		elseif minetest.check_player_privs(param, {scmoderator=true}) and not minetest.check_player_privs(name, {scadmin=true}) then
 			return false,"Moderators can't delete moderators"
-		elseif minetest.check_player_privs(param, {scadmin=true}) then
+		elseif not minetest.check_player_privs(name, {privs=true}) and (minetest.check_player_privs(param, {scadmin=true}) or minetest.check_player_privs(param, {privs=true})) then
 			return false,"can't delete admin"
 			
 		else
@@ -49,24 +49,33 @@ minetest.register_chatcommand("delplayer", {
 
 minetest.register_chatcommand("delmod", {
 	params = "<playername>",
-	description = "Downgrad moderator to player (has the scmoderator privilege)",
-	privs = {scadmin = true},
+	description = "Downgrad to player",
+	privs = {ban = true},
 	func = function(name, param)
-		if param=="" then
+		local user=minetest.get_player_privs(name)
+		if not (user.privs or user.scmoderator or user.scadmin) then
+			return false,"Requires privs or scadmin or scmoderator privilege"
+		elseif param=="" then
 			return false
 		elseif not minetest.player_exists(param) then
 			return false, "player doesnt exist"
 		elseif minetest.check_player_privs(param, {dont_delete=true}) then
 			return false,"player " .. param .. " has the dont_delete privilege"
-		elseif not minetest.check_player_privs(param, {scmoderator=true}) then
-			return false, "player " .. param .. " dont have the scmoderator privilege"
-		else
-			local privs=minetest.string_to_privs(servercleaner.default_privs)
-			minetest.set_player_privs(param,privs)
-			minetest.log("Moderator " .. param .."downgraded to player (by " .. name .. ")")
-			return true,"Moderator " .. param .."downgraded to player"
 		end
-		return false
+
+		local player=minetest.get_player_privs(param)
+
+		if user.privs then
+		elseif user.scadmin and (player.scadmin or player.privs) then
+			return false,"You can't downgrade admins"
+		elseif user.scmoderator and (player.scmoderator or player.scadmin or player.privs) then
+			return false,"You can't downgrade moderators or admins"
+		end
+
+		local privs=minetest.string_to_privs(servercleaner.default_privs)
+		minetest.set_player_privs(param,privs)
+		minetest.log(param .." downgraded to player (by " .. name .. ")")
+		return true,param .." downgraded to player"
 	end,
 })
 

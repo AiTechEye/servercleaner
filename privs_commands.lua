@@ -123,3 +123,36 @@ minetest.register_chatcommand("clonf", {
 		servercleaner.clonf(name)
 	end,
 })
+
+minetest.register_tool("servercleaner:add2clonf", {
+	description = "Add to clonf input",
+	inventory_image = "servercleaner_add.png",
+	groups = {not_in_creative_inventory=1},
+	on_drop = function(itemstack, user, pointed_thing)
+		itemstack:take_item()
+		return itemstack
+	end,
+	on_use = function(itemstack, user, pointed_thing)
+		local name=user:get_player_name()
+		local ban=minetest.check_player_privs(name, {ban=true})
+		if not ban then
+			minetest.chat_send_player(name,"You aren't allowed to use this")
+		elseif pointed_thing.type=="object" and not pointed_thing.ref:is_player() then
+			if pointed_thing.ref:get_luaentity() then
+				servercleaner.clonf(name,pointed_thing.ref:get_luaentity().name)
+			else
+				servercleaner.uobjects(user:get_pos(),name)
+				servercleaner.clonf(name)
+			end
+		elseif pointed_thing.type=="node" then
+			local na=minetest.get_node(pointed_thing.under).name
+			if minetest.registered_nodes[na] then
+				servercleaner.clonf(name,na)
+			else
+				minetest.chat_send_player(name,"Punch it")
+			end
+		end
+		itemstack:take_item()
+		return itemstack
+	end,
+})

@@ -7,6 +7,8 @@ servercleaner={
 	nodes={},
 	node_actions={},
 	updating={},
+	node_filter={},
+	entity_filter={},
 	default_privs=minetest.settings:get("default_privs") or "",
 	server_owner={[minetest.settings:get("name")]=true,singleplayer=true},
 	delme={},

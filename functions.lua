@@ -46,7 +46,8 @@ servercleaner.clonf=function(username,text)
 	list=list:sub(0,list:len()-1)
 
 	gui=gui .. "textlist[0,2;20,8;list;" .. list .."]"
-	.. "label[8,1.5;" .. minetest.colorize("#00FF00",n) .. "]"
+	.. "label[3,1.5;" .. minetest.colorize("#00FF00",n) .. "]"
+	.."tooltip[addinput;Filter: Type an existing node or entity and press Enter]"
 
 	servercleaner.advm_user[username].list=all
 
@@ -305,7 +306,7 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 				servercleaner[ob.globallist][ob.name]=nil
 			end
 			servercleaner.clonf(name)
-		elseif pressed.addinput and pressed.addinput~="" and pressed.key_enter then
+		elseif pressed.addinput and pressed.addinput~="" and pressed.addinput~="__builtin:item" and pressed.key_enter then
 			local no=minetest.registered_nodes[pressed.addinput]
 			local en=minetest.registered_entities[pressed.addinput]
 			local it
@@ -343,7 +344,6 @@ minetest.register_on_player_receive_fields(function(user, form, pressed)
 			local n=pressed.filter:gsub("CHG:","")
 			servercleaner.advm_user[name].filter=tonumber(n)
 			servercleaner.clonf(name)
-
 		elseif pressed.addbyit then
 			user:get_inventory():add_item("main", ItemStack("servercleaner:add2clonf"))
 			minetest.close_formspec(name,"servercleaner.clonf")

@@ -114,7 +114,7 @@ minetest.register_chatcommand("clobjects", {
 
 minetest.register_chatcommand("clonf", {
 	description = "Object & nodes filter",
-	privs={ban=true},
+	privs={scadmin=true},
 	func = function(name, param)
 		local player=minetest.get_player_by_name(name)
 		if not player then
@@ -125,7 +125,7 @@ minetest.register_chatcommand("clonf", {
 })
 
 minetest.register_tool("servercleaner:add2clonf", {
-	description = "Add to clonf input",
+	description = "Add to input",
 	inventory_image = "servercleaner_add.png",
 	groups = {not_in_creative_inventory=1},
 	on_drop = function(itemstack, user, pointed_thing)
@@ -134,8 +134,8 @@ minetest.register_tool("servercleaner:add2clonf", {
 	end,
 	on_use = function(itemstack, user, pointed_thing)
 		local name=user:get_player_name()
-		local ban=minetest.check_player_privs(name, {ban=true})
-		if not ban then
+		local admin=minetest.check_player_privs(name, {scadmin=true})
+		if not admin then
 			minetest.chat_send_player(name,"You aren't allowed to use this")
 		elseif pointed_thing.type=="object" and not pointed_thing.ref:is_player() then
 			if pointed_thing.ref:get_luaentity() then

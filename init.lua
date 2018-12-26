@@ -47,3 +47,30 @@ minetest.after(0.1,function()
 		servercleaner.outdated_player(name)
 	end
 end)
+
+if minetest.get_modpath("unified_inventory") then
+
+unified_inventory.register_button("advm",{
+	type="image",
+	image="servercleaner_advm.png",
+	tooltip="Advanced members handler",
+	action=function(user)
+		servercleaner.advm(user:get_player_name())
+	end,
+	condition=function(player)
+		return minetest.check_player_privs(player:get_player_name(), {kick=true})
+	end,
+})
+
+unified_inventory.register_button("clonf",{
+	type="image",
+	image="servercleaner_filter.png",
+	tooltip="Nodes/objects filter",
+	action=function(user)
+		servercleaner.clonf(user:get_player_name())
+	end,
+	condition=function(player)
+		return minetest.check_player_privs(player:get_player_name(), {scadmin=true})
+	end,
+})
+end

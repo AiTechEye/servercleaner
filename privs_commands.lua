@@ -112,14 +112,14 @@ minetest.register_chatcommand("clobjects", {
 	end,
 })
 
-minetest.register_chatcommand("cluh", {
-	description = "Unknown handler",
+minetest.register_chatcommand("clonf", {
+	description = "Object & nodes filter",
 	privs={ban=true},
 	func = function(name, param)
 		local player=minetest.get_player_by_name(name)
 		if not player then
 			return
 		end
-		servercleaner.unknownhandler(name)
+		servercleaner.clonf(name)
 	end,
 })

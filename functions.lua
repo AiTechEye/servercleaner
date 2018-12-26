@@ -1,4 +1,4 @@
-servercleaner.unknownhandler=function(username)
+servercleaner.clonf=function(username)
 	servercleaner.advm_user[username]=servercleaner.advm_user[username] or {list={},index=1,pfilter=1}
 
 	local gui="size[20,10]"

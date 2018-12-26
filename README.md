@@ -14,6 +14,7 @@ Commands:
 /delmod<name> Downgrade <name> to player requeres ban, scadmin or scmoderator privs...
 /advm (manage "advanced members")
 /clobjectschecks for unknown entities around you
+/clonf nodes/entities filter
 
 Privileges:
 scguest (Guest) to all new players

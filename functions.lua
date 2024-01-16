@@ -5,11 +5,12 @@ servercleaner.clonf=function(username,text)
 	text=text or ""
 	local gui="size[20,10]"
 
-	.. "textlist[0,-0.3;2.5,2.3;filter;All,#FF8888Unknown Nodes,#8833FFUnknown Objects,#ff7700Exists nodes,#FFFF00Exists entities;1]"
-	.. "button[3,-0.2;1.3,1;del;Delete]"
-	.. "button[4,-0.2;1.3,1;sca;Scan]"
-	.. "field[5.3,0;3,1;addinput;;" .. text .. "]"
-	.. "item_image_button[7.8,-0.2;1.3,1;servercleaner:add2clonf;addbyit;]"
+	.. "textlist[0,-0.3;4,2.3;filter;All,#FF8888Unknown Nodes,#8833FFUnknown Objects,#ff7700Exists nodes,#FFFF00Exists entities;1]"
+	.. "button[5,-0.2;1.3,1;del;Delete]"
+	.. "button[6.1,-0.2;1.3,1;sca;Scan]"
+	.. "field[7.5,0;3,1;addinput;;" .. text .. "]"
+	.. "item_image_button[10,-0.2;1.3,1;servercleaner:add2clonf;addbyit;]"
+	.."tooltip[addbyit;Get item (point) to add nodes/objects with]"
 
 	local list=""
 	local n=0
@@ -46,7 +47,7 @@ servercleaner.clonf=function(username,text)
 	list=list:sub(0,list:len()-1)
 
 	gui=gui .. "textlist[0,2;20,8;list;" .. list .."]"
-	.. "label[3,1.5;" .. minetest.colorize("#00FF00",n) .. "]"
+	.. "label[10,1.5;" .. minetest.colorize("#00FF00",n) .. "]"
 	.."tooltip[addinput;Filter: Type an existing node or entity and press Enter]"
 
 	servercleaner.advm_user[username].list=all
@@ -68,23 +69,23 @@ servercleaner.advm=function(username,msg,text)
 
 	local gui="size[20,10]"
 
-	.. "label[0,1.5;" .. minetest.colorize("#ff7700","Owner") .. "]"
-	.. "label[0.8,1.5;" .. minetest.colorize("#8833FF","scadmin") .. "]"
-	.. "label[1.8,1.5;" .. minetest.colorize("#FF8888","scmoderator") .. "]"
-	.. "label[3.2,1.5;" .. minetest.colorize("#777777","not defined") .. "]"
-	.. "label[4.5,1.5;" .. minetest.colorize("#7777FF","new") .. "]"
-	.. "label[5,1.5;" .. minetest.colorize("#00FF00",msg) .. "]"
+	.. "label[0,1.5;" .. minetest.colorize("#ff7700","Owner") 
+	.. minetest.colorize("#8833FF"," scadmin")
+	.. minetest.colorize("#FF8888"," scmoderator")
+	.. minetest.colorize("#777777"," not defined")
+	.. minetest.colorize("#7777FF"," new") .. "]"
+	.. minetest.colorize("#00FF00",msg) .. "]"
 
-	 .. "textlist[0,-0.3;2.5,1.7;pfilter;Advanced members,Active players;" .. servercleaner.advm_user[username].pfilter .. "]"
-	.. (p.ban and "textlist[2.5,-0.3;2.5,1.7;del;Delete," .. (p.scadmin and "Downgrad to player" or "") .."]" or "")
-	.. (p.privs and "textlist[5,-0.3;2.5,1.7;addadv;#FF8888+ scmoderator,#FF8888- scmoderator,#8833FF+ scadmin,#8833FF- scadmin,+ dont_delete #,- dont_delete #]" or "")
-	.. (p.privs and "button[7.5,0.4;1,1;grant;Grant]" or "")
-	.. (p.privs and "button[8.2,0.4;1.3,1;revoke;Revoke]" or "")
+	.. "textlist[0,-0.3;3.5,1.7;pfilter;Advanced members,Active players;" .. servercleaner.advm_user[username].pfilter .. "]"
+	.. (p.ban and "textlist[3.7,-0.3;3.5,1.7;del;Delete," .. (p.scadmin and "Downgrad to player" or "") .."]" or "")
+	.. (p.privs and "textlist[7.4,-0.3;3.5,1.7;addadv;#FF8888+ scmoderator,#FF8888- scmoderator,#8833FF+ scadmin,#8833FF- scadmin,+ dont_delete #,- dont_delete #]" or "")
+	.. (p.privs and "button[11,0.6;1.2,1;grant;Grant]" or "")
+	.. (p.privs and "button[12.1,0.6;1.5,1;revoke;Revoke]" or "")
 
-	.. "button[13,-0.3;2,1;clearob;ClObjects]"
-
-	.. "field[10.5,0.7;3,1;cmdtext;;" .. text .. "]"
-
+	.. "button[17,-0.3;2,1;clearob;ClObjects]"
+	.."tooltip[clearob;Clear Objects]"
+	.. "field[14.2,0.7;3,1;cmdtext;;" .. text .. "]"
+	.."tooltip[cmdtext;Commands (Press enter to send)]"
 
 	local dprivs=minetest.string_to_privs(servercleaner.default_privs)
 	local all={}
@@ -92,12 +93,13 @@ servercleaner.advm=function(username,msg,text)
 	local is=0
 	local cmds=","
 	local privslist=""
-
+	local player_count=0
 
 	if servercleaner.advm_user[username].pfilter==1 then
 		for name, value in minetest.get_auth_handler().iterate() do
 			local privs=minetest.get_player_privs(name)
 			for priv, tr in pairs(privs) do
+				player_count = player_count + 1
 				if not dprivs[priv] and priv~="scguest" then
 					is=is+1
 					local p2s=name .. (privs.dont_delete and "  #  " or "     ")  .. minetest.privs_to_string(privs):gsub(","," ") ..","
@@ -162,26 +164,26 @@ servercleaner.advm=function(username,msg,text)
 	privslist=privslist:sub(0,privslist:len()-1)
 
 	gui=gui .. "textlist[0,2;20,8;members;" .. list .."]"
-	.. (p.privs and "dropdown[7.5,-0.2;3,1;privs;" .. privslist ..";1]" or "")
-	.. "dropdown[10.3,-0.2;3,1;cmdname;" .. cmds ..";1]"
-
+	.. (p.privs and "dropdown[11,-0.2;3,1;privs;" .. privslist ..";1]" or "")
+	.. "dropdown[14,-0.2;3,1;cmdname;" .. cmds ..";1]"
+	.."label[0,10;" .. "Total players: " .. minetest.colorize("#00ff00",player_count) .."]"
 	servercleaner.advm_user[username].list=all
 
-	minetest.after(0.1, function(gui,username)
+	minetest.after(0, function()
 		if servercleaner.advm_user[username] then
 			return minetest.show_formspec(username, "servercleaner.advm",gui)
 		end
-	end, gui,username)
+	end)
 
 	if servercleaner.advm_user[username].pfilter==2 then
 		local id=servercleaner.advm_user[username].id
-		minetest.after(1, function(username,msg,id)
+		minetest.after(1, function()
 			if servercleaner.advm_user[username]
 			and servercleaner.advm_user[username].id==id
 			and servercleaner.advm_user[username].pfilter==2 then
 				servercleaner.advm(username,msg)
 			end
-		end, username,msg,id)
+		end)
 	end
 end
 

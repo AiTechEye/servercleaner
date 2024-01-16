@@ -1,3 +1,0 @@
-areas?
-beds?
-unified_inventory?
